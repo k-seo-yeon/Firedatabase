@@ -1,0 +1,393 @@
+/* 메인프로젝트페이지 */
+
+position: relative;
+width: 1680px;
+height: 1050px;
+left: 1040px;
+top: 169px;
+
+/* Main BG */
+background: #0A0F33;
+
+
+/* Rectangle 9011 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 450px;
+height: 70px;
+left: 1161px;
+top: 44px;
+
+/* Stroke */
+border: 1px solid #989898;
+border-radius: 44px;
+
+
+/* 투두리스트 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 407px;
+height: 360px;
+left: 770px;
+top: 165px;
+
+background: #171C40;
+/* Stroke */
+border: 1px solid #989898;
+border-radius: 44px;
+
+
+/* 투두리스트 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 407px;
+height: 360px;
+left: 1204px;
+top: 165px;
+
+background: #171C40;
+/* Stroke */
+border: 1px solid #989898;
+border-radius: 44px;
+
+
+/* 투두리스트 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 407px;
+height: 360px;
+left: 770px;
+top: 568px;
+
+background: #171C40;
+/* Stroke */
+border: 1px solid #989898;
+border-radius: 44px;
+
+
+/* 투두리스트 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 407px;
+height: 360px;
+left: 770px;
+top: 980px;
+
+background: #171C40;
+/* Stroke */
+border: 1px solid #989898;
+border-radius: 44px;
+
+
+/* 투두리스트 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 407px;
+height: 360px;
+left: 1204px;
+top: 568px;
+
+background: #171C40;
+/* Stroke */
+border: 1px solid #989898;
+border-radius: 44px;
+
+
+/* 투두리스트 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 407px;
+height: 360px;
+left: 1204px;
+top: 980px;
+
+background: #171C40;
+/* Stroke */
+border: 1px solid #989898;
+border-radius: 44px;
+
+
+/* 메인 대시보드 */
+
+position: absolute;
+width: 547px;
+height: 625px;
+left: 173px;
+top: 206px;
+
+box-shadow: inset 0px 4px 4px rgba(0, 0, 0, 0.25);
+border-radius: 44px;
+
+
+/* Rectangle 9010 */
+
+position: absolute;
+width: 543px;
+height: 624px;
+left: 4px;
+top: 1px;
+
+background: #171C40;
+box-shadow: inset 0px 0px 6px 1px rgba(35, 101, 255, 0.15), inset 0px 0px 20px 3px rgba(255, 255, 255, 0.4), inset 0px 0px 30px 5px rgba(102, 148, 255, 0.5), inset 0px 0px 60px 23px #3C49A6;
+border-radius: 44px;
+
+
+/* Vector 12 */
+
+position: absolute;
+left: -17.92%;
+right: -17.92%;
+top: 54.24%;
+bottom: -21.6%;
+
+background: linear-gradient(180deg, #171C40 0%, #727BBE 100%);
+
+
+/* Rectangle 9015 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 127px;
+height: 45px;
+left: 827px;
+top: 36px;
+
+background: rgba(67, 71, 107, 0.5);
+border: 1px solid #43476B;
+backdrop-filter: blur(2.8px);
+/* 참고: 배경 필터는 최소한의 브라우저만 지원합니다 */
+border-radius: 22.5px;
+
+
+/* 프로젝트 추가 */
+
+position: absolute;
+width: 99px;
+height: 23px;
+left: 841px;
+top: 47px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 400;
+font-size: 19px;
+line-height: 120%;
+/* 상자 높이와 동일 또는 23px */
+text-align: center;
+letter-spacing: -0.04em;
+
+color: #FFFFFF;
+
+
+
+/* Frame 4607 */
+
+box-sizing: border-box;
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 121px 26px;
+gap: 27px;
+
+position: absolute;
+width: 88px;
+height: 961px;
+left: 33px;
+top: 44px;
+
+background: #34395D;
+/* Stroke */
+border: 1px solid #989898;
+border-radius: 44px;
+
+
+/* iconamoon:search */
+
+width: 35px;
+height: 35px;
+
+transform: matrix(-1, 0, 0, 1, 0, 0);
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+left: 12.5%;
+right: 12.5%;
+top: 12.5%;
+bottom: 12.5%;
+
+border: 2px solid #FFFFFF;
+transform: matrix(-1, 0, 0, 1, 0, 0);
+
+
+/* majesticons:home-line */
+
+width: 36px;
+height: 36px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+left: 16.67%;
+right: 16.67%;
+top: 17.71%;
+bottom: 16.67%;
+
+border: 2px solid #FFFFFF;
+
+
+/* material-symbols-light:storefront-outline */
+
+width: 36px;
+height: 36px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+left: 10.12%;
+right: 10.08%;
+top: 14.58%;
+bottom: 14.58%;
+
+background: #FFFFFF;
+
+
+/* Group 1785 */
+
+position: absolute;
+width: 46px;
+height: 46px;
+left: 54px;
+top: 71px;
+
+
+
+/* Ellipse 1472 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 16.77px;
+height: 47.48px;
+left: 54.55px;
+top: 71px;
+
+border: 1.13663px solid #FFFFFF;
+transform: rotate(43.46deg);
+
+
+/* Ellipse 1473 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 16.77px;
+height: 47.48px;
+left: 54px;
+top: 71.58px;
+
+border: 1.13663px solid #FFFFFF;
+transform: rotate(-46.54deg);
+
+
+/* Vector 14 */
+
+position: absolute;
+width: 31.17px;
+height: 32.74px;
+left: 61.56px;
+top: 77.38px;
+
+background: linear-gradient(151.05deg, #171C40 27.63%, #626DBF 48.49%, #363F80 69.34%);
+border: 1px solid #FFFFFF;
+
+
+/* Ellipse 1477 */
+
+position: absolute;
+width: 40px;
+height: 40px;
+left: 57px;
+top: 937px;
+
+background: #D9D9D9;
+
+
+/* Mask group */
+
+position: absolute;
+width: 40px;
+height: 40px;
+left: 57px;
+top: 937px;
+
+
+
+/* Ellipse 1474 */
+
+position: absolute;
+width: 40px;
+height: 40px;
+left: 57px;
+top: 937px;
+
+background: #D9D9D9;
+
+
+/* Ellipse 1475 */
+
+position: absolute;
+width: 12px;
+height: 12px;
+left: 71px;
+top: 946px;
+
+background: #676767;
+
+
+/* Ellipse 1476 */
+
+position: absolute;
+width: 29px;
+height: 36px;
+left: 63px;
+top: 960px;
+
+background: #676767;
