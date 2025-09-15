@@ -20,7 +20,7 @@ html, body, #root {
   align-items: center;
   width: 100%;
   height: 60px;
-  background: #FFFFFF;
+  background: #000000;
   position: fixed;
   top: 0;
   left: 0;
@@ -30,6 +30,28 @@ html, body, #root {
   gap: 2rem;
 }
 
+/* 로고 컨테이너 */
+.logo-container {
+  position: absolute;
+  left: 2rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 11;
+}
+
+.logo {
+  height: 50px;
+  width: auto;
+  object-fit: contain;
+}
+
+.logo-text {
+  height: 30px;
+  width: auto;
+  object-fit: contain;
+  margin-left: 10px;
+}
+
 /* 가격/로그인 섹션 */
 .price {
   display: flex;
@@ -37,13 +59,14 @@ html, body, #root {
   gap: 2rem;
 }
 
+
 .pricetext {
   font-family: 'Open Sans', sans-serif;
   font-style: normal;
   font-weight: 600;
   font-size: 16px;
   line-height: 22px;
-  color: #262626;
+  color: #ffffff;
   text-decoration: none;
 }
 
@@ -53,8 +76,10 @@ html, body, #root {
   font-weight: 600;
   font-size: 16px;
   line-height: 22px;
-  color: #262626;
+  color: #fffcfc;
   text-decoration: none;
+  position: relative;
+  left: 10px;
 }
 
 .logintext:hover {

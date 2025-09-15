@@ -6,6 +6,12 @@ function LandingPage() {
   return (
     <div className="Background"> {/* 배경 클래스 적용 */}
       <header className="barheader">
+        {/* 로고 */}
+        <div className="logo-container">
+          <img src="/images/Logo.png" alt="CosMove Logo" className="logo" />
+          <img src="/images/COSMOVE.png" alt="CosMove Text" className="logo-text" />
+        </div>
+        
         <div className="price">
           <span className="pricetext">가격플랜</span>
           <Link to="/login" className="logintext">로그인</Link>

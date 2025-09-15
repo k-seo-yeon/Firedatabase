@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState, useCallback } from "react";
 import SubtaskForm from "../components/SubtaskForm";
 import ReactFlow, {
@@ -7,14 +7,16 @@ import ReactFlow, {
   addEdge,
 } from "reactflow";
 import "reactflow/dist/style.css";
-import "./Detail.css";
+import { getProject as getProjectFromDb, updateProject as updateProjectInDb } from "../services/projects";
 
 function Detail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [project, setProject] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -22,17 +24,46 @@ function Detail() {
   // 중심 노드 ID 상수
   const CENTER_NODE_ID = "center";
 
-  // 프로젝트 불러오기
+  // 프로젝트 불러오기 - 상태 전달 우선, 없으면 Firebase 조회
   useEffect(() => {
-    const projects = JSON.parse(localStorage.getItem("projects") || "[]");
-    const found = projects.find((p) => String(p.id) === id);
-    if (found) {
-      setProject(found);
-    } else {
-      alert("프로젝트를 찾을 수 없습니다.");
-      navigate("/home");
-    }
-  }, [id, navigate]);
+    const loadProject = async () => {
+      try {
+        setLoading(true);
+        
+        // 1. 먼저 전달받은 상태 확인
+        if (location.state?.project) {
+          console.log('상태로 전달받은 프로젝트 사용:', location.state.project);
+          setProject(location.state.project);
+          setLoading(false);
+          return;
+        }
+
+        // 2. 상태가 없으면 Firebase에서 조회 (오프라인 처리 포함)
+        console.log('Firebase에서 프로젝트 조회 시도:', id);
+        const found = await getProjectFromDb(id);
+        
+        if (found) {
+          setProject(found);
+        } else {
+          alert("프로젝트를 찾을 수 없습니다.");
+          navigate("/home");
+        }
+      } catch (error) {
+        console.error('프로젝트 로딩 오류:', error);
+        
+        if (error.code === 'unavailable') {
+          alert("인터넷 연결을 확인해주세요. 홈 화면으로 돌아갑니다.");
+        } else {
+          alert("프로젝트를 불러오는 중 오류가 발생했습니다.");
+        }
+        navigate("/home");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProject();
+  }, [id, navigate, location.state]);
 
   // subtasks → nodes 변환 함수
   const generateNodesFromProject = (project) => {
@@ -80,14 +111,6 @@ function Detail() {
     }
   }, [project, setNodes, setEdges]);
 
-  const updateProjectInStorage = (updatedProject) => {
-    const projects = JSON.parse(localStorage.getItem("projects") || "[]");
-    const newProjects = projects.map((p) =>
-      p.id === updatedProject.id ? updatedProject : p
-    );
-    localStorage.setItem("projects", JSON.stringify(newProjects));
-  };
-
   const onNodeClick = useCallback(
     (event, node) => {
       if (node.id !== CENTER_NODE_ID) {
@@ -104,14 +127,21 @@ function Detail() {
     [setEdges]
   );
 
-  // subtask 추가 → project.subtasks 업데이트
-  const handleAddSubtask = (newSubtask) => {
+  // subtask 추가 → Firestore의 project.subtasks 업데이트
+  const handleAddSubtask = async (newSubtask) => {
     const updated = {
       ...project,
       subtasks: [...(project.subtasks || []), newSubtask],
     };
     setProject(updated);
-    updateProjectInStorage(updated);
+    try {
+      await updateProjectInDb(project.id, { subtasks: updated.subtasks });
+    } catch (e) {
+      console.error('서브태스크 저장 오류:', e);
+      // rollback on failure
+      alert("서브태스크 저장 중 오류가 발생했습니다.");
+      setProject(project);
+    }
     setShowForm(false);
   };
 
@@ -121,20 +151,25 @@ function Detail() {
     handleAddSubtask(newSubtaskWithId);
   };
 
-  // 상태 업데이트 이후 값 찍기
-  useEffect(() => {
-    console.log("Nodes updated:", nodes);
-  }, [nodes]);
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <p>프로젝트를 불러오는 중...</p>
+      </div>
+    );
+  }
 
-  useEffect(() => {
-    console.log("Edges updated:", edges);
-  }, [edges]);
+  if (!project) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <p>프로젝트를 찾을 수 없습니다.</p>
+      </div>
+    );
+  }
 
-  if (!project) return <div>Loading...</div>;
-
-return (
-    <div className="detail-container">
-      <header className="detail-header">
+  return (
+    <div>
+      <header className="top">
         <div className="nav-buttons">
           <button className="btn btn-back" onClick={() => navigate(-1)}>
             ← 뒤로가기
@@ -143,33 +178,24 @@ return (
             상점
           </button>
         </div>
-        <div className="action-buttons">
-          <button className="btn btn-add" onClick={() => setShowForm(true)}>
-            세부 프로젝트 추가
-          </button>
-        </div>
       </header>
+      <div className="container">
+        <h2>메인 프로젝트: {project.title}</h2>
+        <button onClick={() => setShowForm(true)}>세부 목표 추가</button>
+        {showForm && (
+          <SubtaskForm onSubmit={handleSubmitBoth} onClose={() => setShowForm(false)} />
+        )}
 
-      {showForm && (
-        <div className="form-overlay">
-          <SubtaskForm
-            onSubmit={handleSubmitBoth}
-            onClose={() => setShowForm(false)}
+        <div style={{ height: 600 }}>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodeClick={onNodeClick}
           />
         </div>
-      )}
-
-      <div className="react-flow-container">
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeClick={onNodeClick}
-          fitView
-          key={`${nodes.length}-${edges.length}`}
-        />
       </div>
     </div>
   );

@@ -1,55 +1,82 @@
+// Home.jsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Project from "../components/Project";
+// Firebase Timestamp 제거
+import ProjectMap from "../components/ProjectMap";
 import ProjectForm from "../components/ProjectForm";
+import Inspiration from "../components/Inspiration";
+import ProjectTimeline from "../components/ProjectTimeline";
 import "./Home.css"
+import { subscribeAuth, getCurrentUserDisplayName } from '../services/auth';
+// 프로젝트 추가 관련 Firebase 연동 제거: 서비스 호출 사용 안 함
+import { 
+  // createProject,
+  updateProject,
+  deleteProject as deleteProjectFromDB,
+  updateProjectPosition,
+  subscribeToUserProjects
+} from '../services/projects';
 
 function Home() {
   const [projects, setProjects] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [positions, setPositions] = useState({});
-  const [mapOffset, setMapOffset] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [lastMousePos, setLastMousePos] = useState(null);
-  const [selectedCharacter, setSelectedCharacter] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const [displayName, setDisplayName] = useState('');
+  const [isLoadingName, setIsLoadingName] = useState(true);
 
   useEffect(() => {
-    localStorage.setItem("projects", JSON.stringify(projects))
-  }, [projects])
+    const unsubscribe = subscribeAuth(async (user) => {
+      console.log('Auth state changed:', user);
+      setCurrentUser(user);
+      
+      if (user) {
+        setIsLoadingName(true);
+        try {
+          const name = await getCurrentUserDisplayName();
+          console.log('Display name retrieved:', name);
+          setDisplayName(name || '사용자');
+        } catch (error) {
+          console.error('Error getting display name:', error);
+          setDisplayName('사용자');
+        } finally {
+          setIsLoadingName(false);
+        }
+      } else {
+        setDisplayName('');
+        setIsLoadingName(false);
+        setProjects([]);
+        setPositions({});
+        navigate('/');
+      }
+      setIsLoading(false);
+    });
 
-  useEffect(() => {
-    localStorage.setItem("positions", JSON.stringify(positions));
-  }, [positions]);
+    return () => unsubscribe();
+  }, [navigate]);
 
+  // 사용자의 프로젝트 실시간 구독
   useEffect(() => {
-    const storedProjects = JSON.parse(localStorage.getItem("projects") || "[]");
-    const storedPositions = JSON.parse(localStorage.getItem("positions") || "{}");
-    const storedCharacter = JSON.parse(localStorage.getItem("selectedCharacter") || "null");
-    setProjects(storedProjects);
-    setPositions(storedPositions);
-    setSelectedCharacter(storedCharacter);
-  }, []);
+    if (!currentUser) return;
 
-  useEffect(() => {
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
+    console.log('프로젝트 실시간 구독 시작:', currentUser.uid);
+    
+    const unsubscribe = subscribeToUserProjects(currentUser.uid, ({ projects: userProjects, positions: userPositions }) => {
+      console.log('프로젝트 데이터 업데이트:', userProjects, userPositions);
+      
+      // Firebase Timestamp 관련 로깅 제거
+      
+      setProjects(userProjects);
+      setPositions(userPositions);
+    });
 
     return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
+      console.log('프로젝트 구독 해제');
+      unsubscribe();
     };
-  });
-
-  const getPosition = (id) => {
-    const pos = positions[id];
-    return pos
-      ? {
-          top: pos.y - pos.radius + mapOffset.y,
-          left: pos.x - pos.radius + mapOffset.x,
-        }
-      : { top: 0, left: 0 };
-  };
+  }, [currentUser]);
 
   const getRadius = (priority) => {
     if (priority === "상") return 75;
@@ -57,162 +84,214 @@ function Home() {
     return 40;
   };
 
-  const handleMouseDown = (e) => {
-    // 사이드바 영역은 드래그 제외
-    if (e.target.closest('.sidebar')) return;
-    
-    setIsDragging(true);
-    setLastMousePos({ x: e.clientX, y: e.clientY });
-  };
-
-  const handleMouseMove = (e) => {
-    if (!isDragging || !lastMousePos) return;
-
-    const dx = e.clientX - lastMousePos.x;
-    const dy = e.clientY - lastMousePos.y;
-
-    setMapOffset((prev) => ({
-      x: prev.x + dx,
-      y: prev.y + dy,
-    }));
-
-    setLastMousePos({ x: e.clientX, y: e.clientY });
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-    setLastMousePos(null);
-  };
-
-  const handleAddProject = (newProject) => {
-    const id = Date.now();
-    const project = {
-      id,
-      ...newProject,
-      subtasks: [],
-    };
-
-    const radius = getRadius(project.priority);
-    const padding = 20;
-    const tryLimit = 500;
-    // 맵 영역만 고려 (사이드바 제외)
-    const mapWidth = window.innerWidth - 300; // 사이드바 너비 300px
-    const screenHeight = window.innerHeight;
-    const centerX = mapWidth / 2;
-    const centerY = screenHeight / 2;
-
-    const tempPositions = { ...positions };
-    let x = 0;
-    let y = 0;
-    let placed = false;
-    let attempt = 0;
-
-    const isOverlapping = (cx, cy, r, allPositions) => {
-      return Object.values(allPositions).some((pos) => {
-        const dx = pos.x - cx;
-        const dy = pos.y - cy;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        return distance < pos.radius + r + padding;
-      });
-    };
-
-    const isWithinMapArea = (cx, cy, r) => {
-      return cx - r >= 0 && cx + r <= mapWidth && cy - r >= 0 && cy + r <= screenHeight;
-    };
-
-    const numExisting = Object.keys(tempPositions).length;
-
-    if (numExisting === 0) {
-      x = centerX;
-      y = centerY;
-      tempPositions[id] = { x, y, radius };
-      placed = true;
-    } else {
-      const maxDistance = Math.max(mapWidth, screenHeight);
-      const step = radius + padding;
-      
-      for (let distance = step; distance <= maxDistance && !placed && attempt < tryLimit; distance += step) {
-        const circumference = 2 * Math.PI * distance;
-        const angleStep = Math.max(0.1, (2 * Math.PI) / Math.max(8, circumference / (radius * 2)));
-        
-        for (let angle = 0; angle < 2 * Math.PI && !placed && attempt < tryLimit; angle += angleStep) {
-          const existingPositions = Object.values(tempPositions);
-          
-          for (const existingPos of existingPositions) {
-            if (placed || attempt >= tryLimit) break;
-            
-            const cx = existingPos.x + Math.cos(angle) * distance;
-            const cy = existingPos.y + Math.sin(angle) * distance;
-            
-            attempt++;
-            
-            if (isWithinMapArea(cx, cy, radius) && !isOverlapping(cx, cy, radius, tempPositions)) {
-              x = cx;
-              y = cy;
-              tempPositions[id] = { x, y, radius };
-              placed = true;
-              break;
-            }
-          }
-        }
-      }
-      
-      if (!placed) {
-        const gridSize = Math.min(radius * 2 + padding, 50);
-        
-        for (let gx = radius; gx <= mapWidth - radius && !placed && attempt < tryLimit; gx += gridSize) {
-          for (let gy = radius; gy <= screenHeight - radius && !placed && attempt < tryLimit; gy += gridSize) {
-            attempt++;
-            
-            if (!isOverlapping(gx, gy, radius, tempPositions)) {
-              x = gx;
-              y = gy;
-              tempPositions[id] = { x, y, radius };
-              placed = true;
-              break;
-            }
-          }
-        }
-      }
-      
-      if (!placed) {
-        const maxRandomAttempts = 200;
-        for (let i = 0; i < maxRandomAttempts && !placed; i++) {
-          const rx = radius + Math.random() * (mapWidth - 2 * radius);
-          const ry = radius + Math.random() * (screenHeight - 2 * radius);
-          
-          if (!isOverlapping(rx, ry, radius, tempPositions)) {
-            x = rx;
-            y = ry;
-            tempPositions[id] = { x, y, radius };
-            placed = true;
-          }
-        }
-      }
-    }
-
-    if (!placed) {
-      alert("프로젝트를 배치할 공간이 부족합니다. 화면을 확대하거나 일부 프로젝트를 삭제해주세요.");
+  const handleAddProject = async (newProject) => {
+    if (!currentUser) {
+      alert('로그인이 필요합니다.');
       return;
     }
 
-    setProjects((prev) => [...prev, project]);
-    setPositions(tempPositions);
+    console.log('새 프로젝트 생성 시작:', newProject);
+
+    try {
+      const radius = getRadius(newProject.priority);
+      const padding = 20;
+      const tryLimit = 500;
+      
+      // 맵 영역만 고려 (사이드바 제외)
+      const mapWidth = window.innerWidth - 300; // 사이드바 너비 300px
+      const screenHeight = window.innerHeight;
+      const centerX = mapWidth / 2;
+      const centerY = screenHeight / 2;
+
+      let x = 0;
+      let y = 0;
+      let placed = false;
+      let attempt = 0;
+
+      const isOverlapping = (cx, cy, r, allPositions) => {
+        return Object.values(allPositions).some((pos) => {
+          const dx = pos.x - cx;
+          const dy = pos.y - cy;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          return distance < pos.radius + r + padding;
+        });
+      };
+
+      const isWithinMapArea = (cx, cy, r) => {
+        return cx - r >= 0 && cx + r <= mapWidth && cy - r >= 0 && cy + r <= screenHeight;
+      };
+
+      const numExisting = Object.keys(positions).length;
+
+      if (numExisting === 0) {
+        x = centerX;
+        y = centerY;
+        placed = true;
+      } else {
+        const maxDistance = Math.max(mapWidth, screenHeight);
+        const step = radius + padding;
+        
+        for (let distance = step; distance <= maxDistance && !placed && attempt < tryLimit; distance += step) {
+          const circumference = 2 * Math.PI * distance;
+          const angleStep = Math.max(0.1, (2 * Math.PI) / Math.max(8, circumference / (radius * 2)));
+          
+          for (let angle = 0; angle < 2 * Math.PI && !placed && attempt < tryLimit; angle += angleStep) {
+            const existingPositions = Object.values(positions);
+            
+            for (const existingPos of existingPositions) {
+              if (placed || attempt >= tryLimit) break;
+              
+              const cx = existingPos.x + Math.cos(angle) * distance;
+              const cy = existingPos.y + Math.sin(angle) * distance;
+              
+              attempt++;
+              
+              if (isWithinMapArea(cx, cy, radius) && !isOverlapping(cx, cy, radius, positions)) {
+                x = cx;
+                y = cy;
+                placed = true;
+                break;
+              }
+            }
+          }
+        }
+        
+        if (!placed) {
+          const gridSize = Math.min(radius * 2 + padding, 50);
+          
+          for (let gx = radius; gx <= mapWidth - radius && !placed && attempt < tryLimit; gx += gridSize) {
+            for (let gy = radius; gy <= screenHeight - radius && !placed && attempt < tryLimit; gy += gridSize) {
+              attempt++;
+              
+              if (!isOverlapping(gx, gy, radius, positions)) {
+                x = gx;
+                y = gy;
+                placed = true;
+                break;
+              }
+            }
+          }
+        }
+        
+        if (!placed) {
+          const maxRandomAttempts = 200;
+          for (let i = 0; i < maxRandomAttempts && !placed; i++) {
+            const rx = radius + Math.random() * (mapWidth - 2 * radius);
+            const ry = radius + Math.random() * (screenHeight - 2 * radius);
+            
+            if (!isOverlapping(rx, ry, radius, positions)) {
+              x = rx;
+              y = ry;
+              placed = true;
+            }
+          }
+        }
+      }
+
+      if (!placed) {
+        alert("프로젝트를 배치할 공간이 부족합니다. 화면을 확대하거나 일부 프로젝트를 삭제해주세요.");
+        return;
+      }
+
+      const position = { x, y, radius };
+      
+      // 로컬 상태에만 프로젝트 추가 (Firebase 저장 제거)
+      const localId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const createdProject = {
+        id: localId,
+        ...newProject,
+        createdAt: new Date(),
+        ownerId: currentUser.uid,
+        subtasks: []
+      };
+
+      setProjects(prev => [...prev, createdProject]);
+      setPositions(prev => ({ ...prev, [localId]: position }));
+      console.log('로컬로 프로젝트가 추가되었습니다:', createdProject);
+      
+    } catch (error) {
+      console.error('프로젝트 추가 중 오류:', error);
+      alert('프로젝트 추가 중 오류가 발생했습니다. 다시 시도해주세요.');
+    }
   };
 
-  const editProject = (updatedProject) => {
-    setProjects((prev) =>
-     prev.map((p) => (p.id === updatedProject.id ? updatedProject : p))
-    );
+  const editProject = async (updatedProject) => {
+    if (!currentUser) return;
+
+    try {
+      // 업데이트 가능한 필드만 선별
+      const { id, title, deadline, progress, priority, description } = updatedProject;
+      const updateData = {
+        title,
+        deadline, // 이미 Timestamp 형식
+        progress,
+        priority
+      };
+      
+      // description이 있으면 포함
+      if (description !== undefined) {
+        updateData.description = description;
+      }
+      
+      await updateProject(id, updateData);
+      
+      console.log('프로젝트가 성공적으로 수정되었습니다.');
+    } catch (error) {
+      console.error('프로젝트 수정 중 오류:', error);
+      alert('프로젝트 수정 중 오류가 발생했습니다. 다시 시도해주세요.');
+    }
   };
 
-  const deleteProject = (id) => {
-    setProjects((prev) => prev.filter((p) => p.id !== id));
-    setPositions((prev) => {
-      const copy = { ...prev };
-      delete copy[id];
-      return copy;
-    });
+  const deleteProject = async (id) => {
+    if (!currentUser) return;
+
+    try {
+      // 데이터베이스에서 프로젝트 삭제
+      await deleteProjectFromDB(id);
+      
+      console.log('프로젝트가 성공적으로 삭제되었습니다.');
+    } catch (error) {
+      console.error('프로젝트 삭제 중 오류:', error);
+      alert('프로젝트 삭제 중 오류가 발생했습니다. 다시 시도해주세요.');
+    }
+  };
+
+  // 프로젝트 위치 변경 시 데이터베이스 업데이트
+  const handlePositionChange = async (newPositions) => {
+    if (!currentUser) return;
+
+    try {
+      // 변경된 위치만 찾아서 업데이트
+      const changedPositions = {};
+      
+      Object.keys(newPositions).forEach(projectId => {
+        const oldPos = positions[projectId];
+        const newPos = newPositions[projectId];
+        
+        if (!oldPos || 
+            oldPos.x !== newPos.x || 
+            oldPos.y !== newPos.y || 
+            oldPos.radius !== newPos.radius) {
+          changedPositions[projectId] = newPos;
+        }
+      });
+
+      if (Object.keys(changedPositions).length > 0) {
+        // 각각의 변경된 프로젝트 위치를 개별적으로 업데이트
+        await Promise.all(
+          Object.entries(changedPositions).map(([projectId, position]) =>
+            updateProjectPosition(projectId, position)
+          )
+        );
+        console.log('프로젝트 위치가 성공적으로 업데이트되었습니다.');
+      }
+      
+      // UI 상태는 실시간 구독을 통해 자동으로 업데이트됨
+    } catch (error) {
+      console.error('프로젝트 위치 업데이트 중 오류:', error);
+      // 에러가 발생해도 UI는 일시적으로 업데이트 (사용자 경험 개선)
+      setPositions(newPositions);
+    }
   };
 
   const getCurrentDate = () => {
@@ -220,72 +299,47 @@ function Home() {
     return today.toISOString().split('T')[0];
   };
 
-  return (
-    <div className="game-container">
-      {/* 선택된 캐릭터 표시 (왼쪽 상단) */}
-      {selectedCharacter && (
-        <div className="home-character-display">
-          <img 
-            src={selectedCharacter.image} 
-            alt={selectedCharacter.name}
-            className="home-character-avatar"
-          />
-          <div className="home-character-name">{selectedCharacter.name}</div>
-        </div>
-      )}
-
-      {/* 메인 맵 영역 */}
-      <div 
-        className="map-area"
-        onMouseDown={handleMouseDown}
-        style={{
-          position: "relative",
-          overflow: "hidden",
-          userSelect: isDragging ? "none" : "auto",
-          cursor: isDragging ? "grabbing" : "grab",
-        }}
-      >
-        {projects.map((project) => (
-          <Project
-            key={project.id}
-            project={project}
-            onDeleteProject={deleteProject}
-            onEditProject={editProject}
-            position={getPosition(project.id)}
-          />
-        ))}
-
-        {showForm && (
-          <ProjectForm
-            onSubmit={handleAddProject}
-            onClose={() => setShowForm(false)}
-          />
-        )}
+  // 로딩 중일 때
+  if (isLoading) {
+    return (
+      <div className="loading-container">
+        <p>로딩 중...</p>
       </div>
+    );
+  }
 
+  // 로그인하지 않은 경우
+  if (!currentUser) {
+    return null; // 이미 navigate('/')로 리다이렉트됨
+  }
+
+  return ( 
+    <div className="game-container">
       {/* 게임 스타일 사이드바 */}
       <div className="sidebar">
-        {/* 프로필 섹션 */}
         <div className="profile-section">
           <div className="profile-avatar">
-            {selectedCharacter ? (
-              <img 
-                src={selectedCharacter.image} 
-                alt={selectedCharacter.name}
-                className="selected-character-avatar"
-              />
-            ) : (
-              <div className="avatar-circle"></div>
-            )}
+            <div className="avatar-circle"></div>
+          </div>
+          <div className="profile-info">
+            <h2 className="profile-name">
+              {isLoadingName ? '로딩 중...' : (displayName || '코딩잘하고싶엉')}
+            </h2>
+            <button
+              className="logout-button"
+              onClick={() => navigate("/")}
+            >
+              로그아웃
+            </button>
           </div>
         </div>
-        <div className="profile-info">
-          <h2 className="profile-name">플레이어</h2>
-          <p className="profile-date">{getCurrentDate()}</p>
-        </div>
 
-        {/* 메뉴 버튼들 */}
         <div className="menu-section">
+          <button
+            className="game-button search"
+          >
+            검색
+          </button>
           <button 
             className="game-button add-project"
             onClick={() => setShowForm(true)}
@@ -293,45 +347,62 @@ function Home() {
             프로젝트 추가
           </button>
           <button 
-            className="game-button manage"
-            onClick={() => navigate("/manage")}
-          >
-            프로젝트 관리
-          </button>
-          <button 
             className="game-button store"
             onClick={() => navigate("/store")}
           >
             상점
           </button>
-          <button 
-            className="game-button logout"
-            onClick={() => navigate("/")}
-          >
-            로그아웃
-          </button>
+        </div>
+        <div>
+          <h5>프로젝트 목록</h5>
+        </div>    
+      </div>
+
+      {/* 메인 콘텐츠 영역 */}
+      <div className="main-content">
+        {/* 헤더 */}
+        <header className="main-header">
+          <p>{getCurrentDate()}</p>
+          <h1>
+            {isLoadingName ? '로딩 중...' : `${displayName || '사용자'}님`}, 오늘은 어떤 우주를 정복해볼까요?
+          </h1>
+        </header>
+
+        {/*작업영역*/}
+        <div className="workspace">
+          {/* 프로젝트 맵 */}
+          <div className="project-map-container">
+            <ProjectMap
+              projects={projects}
+              positions={positions}
+              onDeleteProject={deleteProject}
+              onEditProject={editProject}
+              onPositionsChange={handlePositionChange}
+            />
+          
+            {showForm && (
+              <ProjectForm
+                onSubmit={handleAddProject}
+                onClose={() => setShowForm(false)}
+              />
+            )}
+          </div>
+          {/*우측 패널*/}
+          <div className="right-pannel">
+            <div className="todo">
+              <h3>오늘의 할 일</h3>
+              {/*투두리스트 추가예정*/}
+            </div>
+            <div className="inspiration">
+              <Inspiration />
+            </div>
+          </div>
         </div>
 
-        {/* 상태 정보 */}
-        <div className="status-section">
-          <div className="status-item">
-            <span className="status-label">총 프로젝트</span>
-            <span className="status-value">{projects.length}</span>
-          </div>
-          <div className="status-item">
-            <span className="status-label">완료된 프로젝트</span>
-            <span className="status-value">
-              {projects.filter(p => p.status === '완료').length}
-            </span>
-          </div>
-        </div>
-
-        {/* 하단 팁 */}
-        <div className="tip-section">
-          <div className="tip-box">
-            <p>💡 팁: 마우스로 맵을 드래그하여 이동할 수 있습니다!</p>
-          </div>
-        </div>
+        {/* 타임라인 */}
+        <footer className="timeline-footer">
+          <ProjectTimeline projects={projects} />
+        </footer>
       </div>
     </div>
   );

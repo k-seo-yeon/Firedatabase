@@ -1,42 +1,33 @@
 import React, { useState, useEffect } from "react";
 import "./CharacterGrid.css";
 import CharacterDisplay from "./CharacterDisplay";
+import { saveUserCharacterData, getUserCharacterData, initializeUserCharacterData } from "../services/characters";
+import { subscribeAuth } from "../services/auth";
 
 function CharacterGrid({ characters, onSelect }) {
+  // 사용자 인증 상태
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
   // 사용자 보유 돈 상태 (A, B, C, D)
-  const [userMoney, setUserMoney] = useState(() => {
-    const saved = localStorage.getItem('userMoney');
-    return saved ? JSON.parse(saved) : {
-      A: 3, // 테스트용 초기값
-      B: 2,
-      C: 1,
-      D: 1
-    };
+  const [userMoney, setUserMoney] = useState({
+    A: 3, // 기본값
+    B: 2,
+    C: 1,
+    D: 1
   });
 
   // 캐릭터 해금 상태 관리
-  const [unlockedCharacters, setUnlockedCharacters] = useState(() => {
-    const saved = localStorage.getItem('unlockedCharacters');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    return characters.map(char => ({ ...char, unlocked: char.unlocked }));
-  });
+  const [unlockedCharacters, setUnlockedCharacters] = useState([]);
 
   // 닉네임 상태 관리
-  const [nickname, setNickname] = useState(() => {
-    const saved = localStorage.getItem('userNickname');
-    return saved || '내이름은뿌꾸';
-  });
+  const [nickname, setNickname] = useState('내이름은뿌꾸');
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [tempNickname, setTempNickname] = useState('');
 
   // 해금 애니메이션 상태 관리
   const [unlockingCharacters, setUnlockingCharacters] = useState(new Set());
-  const [selectedCharacter, setSelectedCharacter] = useState(() => {
-    const saved = localStorage.getItem('selectedCharacter');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [selectedCharacter, setSelectedCharacter] = useState(null);
 
   // 해금 조건을 만족하는지 확인하는 함수
   const canUnlock = (character) => {
@@ -49,15 +40,64 @@ function CharacterGrid({ characters, onSelect }) {
     );
   };
 
-  // 돈 상태 변경 시 localStorage에 저장
+  // 사용자 인증 상태 감지
   useEffect(() => {
-    localStorage.setItem('userMoney', JSON.stringify(userMoney));
-  }, [userMoney]);
+    const unsubscribe = subscribeAuth(async (user) => {
+      setUser(user);
+      if (user) {
+        // 로그인된 경우 파이어베이스에서 데이터 불러오기
+        try {
+          const characterData = await getUserCharacterData(user.uid);
+          if (characterData) {
+            setUserMoney(characterData.userMoney);
+            setUnlockedCharacters(characterData.unlockedCharacters);
+            setNickname(characterData.nickname);
+            setSelectedCharacter(characterData.selectedCharacter);
+          } else {
+            // 첫 로그인인 경우 초기 데이터 설정
+            const initialData = await initializeUserCharacterData(user.uid, characters);
+            setUserMoney(initialData.userMoney);
+            setUnlockedCharacters(initialData.unlockedCharacters);
+            setNickname(initialData.nickname);
+            setSelectedCharacter(initialData.selectedCharacter);
+          }
+        } catch (error) {
+          console.error('Error loading character data:', error);
+          // 에러 시 기본값으로 초기화
+          setUnlockedCharacters(characters.map(char => ({ ...char, unlocked: char.unlocked })));
+        }
+      } else {
+        // 로그아웃된 경우 로컬 스토리지에서 불러오기 (오프라인 모드)
+        const savedMoney = localStorage.getItem('userMoney');
+        const savedCharacters = localStorage.getItem('unlockedCharacters');
+        const savedNickname = localStorage.getItem('userNickname');
+        const savedSelected = localStorage.getItem('selectedCharacter');
+        
+        if (savedMoney) setUserMoney(JSON.parse(savedMoney));
+        if (savedCharacters) setUnlockedCharacters(JSON.parse(savedCharacters));
+        if (savedNickname) setNickname(savedNickname);
+        if (savedSelected) setSelectedCharacter(JSON.parse(savedSelected));
+      }
+      setIsLoading(false);
+    });
 
-  // 캐릭터 해금 상태 변경 시 localStorage에 저장
+    return () => unsubscribe();
+  }, [characters]);
+
+  // 사용자 데이터 변경 시 파이어베이스에 저장
   useEffect(() => {
-    localStorage.setItem('unlockedCharacters', JSON.stringify(unlockedCharacters));
-  }, [unlockedCharacters]);
+    if (user && !isLoading) {
+      const characterData = {
+        selectedCharacter,
+        unlockedCharacters,
+        userMoney,
+        nickname
+      };
+      saveUserCharacterData(user.uid, characterData).catch(error => {
+        console.error('Error saving character data:', error);
+      });
+    }
+  }, [user, selectedCharacter, unlockedCharacters, userMoney, nickname, isLoading]);
 
   // 자동 해금 체크 및 업데이트
   useEffect(() => {
@@ -87,6 +127,7 @@ function CharacterGrid({ characters, onSelect }) {
   const handleCharacterSelect = (character) => {
     if (character.unlocked) {
       setSelectedCharacter(character);
+      // 로컬 스토리지에도 백업 저장
       localStorage.setItem('selectedCharacter', JSON.stringify(character));
       onSelect(character);
     }
@@ -116,6 +157,7 @@ function CharacterGrid({ characters, onSelect }) {
   const saveNickname = () => {
     if (tempNickname.trim()) {
       setNickname(tempNickname.trim());
+      // 로컬 스토리지에도 백업 저장
       localStorage.setItem('userNickname', tempNickname.trim());
       setIsEditingNickname(false);
       setTempNickname('');
@@ -130,6 +172,24 @@ function CharacterGrid({ characters, onSelect }) {
       cancelEditingNickname();
     }
   };
+
+  // 로딩 중일 때 표시
+  if (isLoading) {
+    return (
+      <div className="backgroundColor">
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: '100vh',
+          color: 'white',
+          fontSize: '18px'
+        }}>
+          캐릭터 데이터를 불러오는 중...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="backgroundColor">
