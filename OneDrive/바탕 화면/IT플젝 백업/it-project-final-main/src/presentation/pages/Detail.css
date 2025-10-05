@@ -1,0 +1,82 @@
+/* 초기화 */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* 기본 바디 스타일 */
+.body-detail{
+  font-family: 'Noto Sans KR', sans-serif;
+  background: #0A0F33;
+  color: white;
+  min-height: 100vh;
+}
+
+/* 레이아웃 */
+.container-detail {
+  display: grid;
+  grid-template-columns: 65px 1fr;   /* 좌측 15%, 나머지 */
+  height: 100vh;
+}
+
+/* 좌측 사이드바 */
+.sidebar-detail {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 50px; /* 둥근 모서리 */
+  backdrop-filter: blur(10px);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  z-index: 1000;
+}
+
+.sidebar-detail:hover{
+  width: 250px;
+  border-radius: 20px;
+}
+
+
+/* 메인 영역 */
+.main-wrapper-detail {
+  /* display: grid;
+  grid-template-rows: auto auto 5fr 1fr; /* 헤더, 본문, 타임라인 */
+  /* padding: 20px;
+  gap: 1rem; */
+  .main-content {
+  display: grid;
+  grid-template-rows: auto auto 1fr 140px; /* 헤더 - 작업영역 - 타임라인 고정 높이 */
+  height: 100vh;
+  overflow: hidden;
+  gap: 5px;
+}
+
+}
+
+/* 헤더 영역 */
+/* .header {
+  flex: 0 0 auto;
+} */
+
+/* 본문 제목 영역 */
+/* .main-article-detail {
+  flex: 0 0 auto;
+} */
+
+/* 본문 영역 (가운데 + 우측) */
+.content-area-detail {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 2fr 1fr; /* 가운데:우측 = 2:1 */
+  gap: 1rem;
+  padding: 0px;;
+}
+
+
+/* 타임라인 */
+.timeline-detail {
+  background: linear-gradient(0deg, var(--BG-3, #171C40) 0%, #3C49A6 100%);
+  border-radius: 30px;
+  border: 1px #989898 solid;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
