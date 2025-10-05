@@ -4,7 +4,7 @@ import {
   createTodo, 
   updateTodoProgress, 
   deleteTodo, 
-  subscribeTodosByDate 
+  subscribeUserTodos 
 } from "../../../services/todos";
 
 const styles = `
@@ -219,17 +219,20 @@ function TodoList({ date = new Date() }) {
       return;
     }
 
-    const unsubscribe = subscribeTodosByDate(user.uid, currentDateKey, (todos) => {
-      console.log('Received todos from Firebase:', todos); // 디버깅용
-      // 중복 방지를 위해 기존 투두와 새 투두를 합치되, 중복 제거
-      setTodos(prevTodos => {
-        const existingIds = new Set(prevTodos.map(t => t.id));
-        const newTodos = todos.filter(t => !existingIds.has(t.id));
-        return [...prevTodos, ...newTodos];
-      });
+    console.log('투두 실시간 구독 시작:', user.uid, '날짜:', currentDateKey);
+
+    const unsubscribe = subscribeUserTodos(user.uid, (allTodos) => {
+      console.log('모든 투두 받음:', allTodos);
+      // 현재 날짜의 투두만 필터링
+      const todayTodos = allTodos.filter(todo => todo.date === currentDateKey);
+      console.log('오늘 투두 필터링됨:', todayTodos);
+      setTodos(todayTodos);
     });
 
-    return () => unsubscribe();
+    return () => {
+      console.log('투두 구독 해제');
+      unsubscribe();
+    };
   }, [user, currentDateKey]);
 
   // subscribeTodosByDate로 이미 특정 날짜의 투두만 받아오므로 추가 필터링 불필요
@@ -248,10 +251,16 @@ function TodoList({ date = new Date() }) {
       };
 
       const newTodoItem = await createTodo(user.uid, todoData);
-      console.log('Created todo:', newTodoItem); // 디버깅용
+      console.log('Created todo:', newTodoItem);
       
-      // 로컬 상태에 즉시 추가 (실시간 구독이 있지만 즉시 반영을 위해)
-      setTodos(prev => [newTodoItem, ...prev]);
+      // 즉시 반영을 위해 로컬 상태에 추가 (중복 방지)
+      setTodos(prev => {
+        const existingIds = new Set(prev.map(t => t.id));
+        if (existingIds.has(newTodoItem.id)) {
+          return prev; // 이미 존재하면 추가하지 않음
+        }
+        return [newTodoItem, ...prev];
+      });
       setNewTodo('');
     } catch (error) {
       console.error('Error adding todo:', error);
@@ -263,7 +272,7 @@ function TodoList({ date = new Date() }) {
 
   const handleUpdateTodoProgress = async (todoId, newProgress) => {
     try {
-      // 로컬 상태 즉시 업데이트
+      // 즉시 반영을 위해 로컬 상태 업데이트
       setTodos(prev => prev.map(todo => 
         todo.id === todoId 
           ? { ...todo, progress: newProgress, completed: newProgress === 100 }
@@ -271,7 +280,7 @@ function TodoList({ date = new Date() }) {
       ));
       
       await updateTodoProgress(user.uid, todoId, newProgress);
-      console.log('Updated todo progress:', todoId, newProgress); // 디버깅용
+      console.log('Updated todo progress:', todoId, newProgress);
     } catch (error) {
       console.error('Error updating todo progress:', error);
       alert('진행률 업데이트 중 오류가 발생했습니다.');
@@ -279,22 +288,15 @@ function TodoList({ date = new Date() }) {
   };
 
   const handleDeleteTodo = async (todoId) => {
-    // 삭제할 투두 백업
-    const todoToDelete = todos.find(todo => todo.id === todoId);
-    
     try {
-      // 로컬 상태에서 즉시 제거
+      // 즉시 반영을 위해 로컬 상태에서 제거
       setTodos(prev => prev.filter(todo => todo.id !== todoId));
       
       await deleteTodo(user.uid, todoId);
-      console.log('Deleted todo:', todoId); // 디버깅용
+      console.log('Deleted todo:', todoId);
     } catch (error) {
       console.error('Error deleting todo:', error);
       alert('할 일 삭제 중 오류가 발생했습니다.');
-      // 오류 시 롤백
-      if (todoToDelete) {
-        setTodos(prev => [...prev, todoToDelete]);
-      }
     }
   };
 

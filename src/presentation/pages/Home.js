@@ -56,7 +56,7 @@ function Home() {
         setIsLoadingName(false);
         setProjects([]);
         setPositions({});
-        navigate('/');
+        // App.js에서 라우팅을 처리하므로 navigate 제거
       }
       setIsLoading(false);
     });

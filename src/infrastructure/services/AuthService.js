@@ -4,7 +4,10 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  updateProfile
+  updateProfile,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
@@ -42,8 +45,15 @@ export class AuthService {
     }
   }
 
-  async signIn(email, password) {
+  async signIn(email, password, keepLoggedIn = false) {
     try {
+      // 로그인 유지 옵션에 따라 persistence 설정
+      if (keepLoggedIn) {
+        await setPersistence(auth, browserLocalPersistence);
+      } else {
+        await setPersistence(auth, browserSessionPersistence);
+      }
+      
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
       // 기존 사용자에게 젤리 코인 데이터가 없으면 생성
@@ -57,6 +67,8 @@ export class AuthService {
 
   async signOut() {
     try {
+      // 로그아웃 시 세션 persistence로 변경하여 로그인 유지 해제
+      await setPersistence(auth, browserSessionPersistence);
       await signOut(auth);
     } catch (error) {
       throw new Error(error.message);

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import ProjectList from "./ProjectList.jsx";
 import "./Sidebar.css";
-import { subscribeAuth } from '../../../services/auth';
+import { subscribeAuth, signOut } from '../../../services/auth';
 import { subscribeToUserProjects } from '../../../services/projects';
 
 function Sidebar() {
@@ -39,6 +39,16 @@ function Sidebar() {
     return () => unsubscribe();
   }, [currentUser]);
 
+  // 로그아웃 처리 함수
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      // App.js의 라우팅 로직에 의해 자동으로 랜딩페이지로 이동됨
+    } catch (error) {
+      console.error('로그아웃 중 오류 발생:', error);
+    }
+  };
+
   return (
     <div className="sidebar">
       <div className="menu-section">
@@ -58,7 +68,7 @@ function Sidebar() {
         </button>
         <button 
           className="game-button logout"
-          onClick={() => navigate("/")}
+          onClick={handleLogout}
         >
           <img src="/images/signoutIcon.png" alt="로그아웃 아이콘"/>
           <p>로그아웃</p>

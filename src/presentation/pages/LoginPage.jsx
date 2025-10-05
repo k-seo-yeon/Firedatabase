@@ -10,6 +10,7 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [keepLoggedIn, setKeepLoggedIn] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,7 +24,7 @@ function LoginPage() {
     }
 
     try {
-      await signIn(email, password);
+      await signIn(email, password, keepLoggedIn);
       navigate("/home");
     } catch (err) {
       const code = err?.code || "";
@@ -77,7 +78,12 @@ function LoginPage() {
 
           <div className="login-options">
             <label className="keep-logged-in">
-              <input type="checkbox" className="checkbox" />
+              <input 
+                type="checkbox" 
+                className="checkbox" 
+                checked={keepLoggedIn}
+                onChange={(e) => setKeepLoggedIn(e.target.checked)}
+              />
               <span>로그인 유지</span>
             </label>
             <button type="button" className="numberfind">
