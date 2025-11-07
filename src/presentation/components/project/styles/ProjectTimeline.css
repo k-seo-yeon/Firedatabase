@@ -1,0 +1,56 @@
+/* ProjectTimeline.css - 날짜 디버깅용 */
+.simple-timeline {
+  position: relative;
+  width: 100%;
+  height: 100%; /* 높이 증가 */
+  background: linear-gradient(135deg,#3c3477b0, #7a89a5);
+  border: none;
+  margin: 0;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: auto;
+  box-shadow: inset 0 0 25px rgba(162, 172, 255, 0.962);
+}
+
+.simple-line {
+  position: absolute;
+  top: 50%;
+  left: 20px;
+  right: 20px;
+  height: 2px;
+  background: #edededc6;
+}
+
+.simple-dot {
+  position: absolute;
+  top: 43%; /* 라인 위에 정확히 위치 */
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 10px;
+  z-index: 10;
+}
+
+/* 진행 상태별 색상 */
+.simple-dot.normal {
+  background: rgb(149, 216, 255); /* 정상 진행 */
+}
+
+.simple-dot.warning {
+  background: rgb(252, 255, 154); /* 60% 이상 */
+}
+
+.simple-dot.danger {
+  background: #ff91ca; /* 80% 이상 */
+}
+
+.simple-dot.overdue {
+  background: gray; /* 마감 초과 */
+}
