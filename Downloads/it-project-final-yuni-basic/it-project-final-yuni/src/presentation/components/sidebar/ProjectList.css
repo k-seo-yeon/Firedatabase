@@ -1,0 +1,50 @@
+.project-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.project-list-title {
+  font-size: 0.875rem;
+  color: rgb(148, 163, 184);
+  font-weight: 500;
+}
+
+.project-list-items {
+  list-style: none;
+  padding-left: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.project-category {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: rgb(203, 213, 225);
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.project-category:hover {
+  color: white;
+}
+
+.project-subitems {
+  padding-left: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: rgb(148, 163, 184);
+  list-style: none;
+}
+
+.project-subitem {
+  cursor: pointer;
+}
+
+.project-subitem:hover {
+  color: white;
+}
