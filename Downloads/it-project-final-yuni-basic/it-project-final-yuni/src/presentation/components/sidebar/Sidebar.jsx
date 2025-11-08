@@ -96,12 +96,12 @@ function Sidebar() {
             <img 
               src = "/images/big-profile.png"
               className="profile-avatar"/>
-            {sidebarExpanded && (
+            {/*{sidebarExpanded && (
               <div className="profile-info">
                 <div className="profile-name">남지윤</div>
                 <div className="profile-upgrade">Plan upgrade &gt;</div>
               </div>
-            )}
+            )}*/}
           </div>
         </div>
       </div>
